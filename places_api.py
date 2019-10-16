@@ -7,6 +7,8 @@
 import pandas as pd
 import datetime
 import re
+import codecs
+import logging
 
 from lxml import html
 
@@ -25,8 +27,7 @@ def read_file(file_name):
         df:    the DataFrame containing the geodata
     """
 
-    # read the file
-    with open(file_name, 'r') as f:
+    with codecs.open(file_name, encoding='utf-8') as f:
         kml = f.read()
 
     # decode and re-encode to UTF-8 after doing some replacements
@@ -65,14 +66,20 @@ def read_file(file_name):
     # create the set of coordinates on which one can apply the geocoder's reverse function
     df['coords_for_reverse'] = [[df['coords_lat'][i], df['coords_long'][i]] for i in range(len(df))]
 
-    # # fetch location data
-    # geolocator = Nominatim(user_agent="places")
-    # reverse = RateLimiter(geolocator.reverse, min_delay_seconds=1.01)
-    # df['location'] = df['coords_for_reverse'].apply(reverse, language='en')
+    try:
+        # fetch location data
+        geolocator_Nominatim = Nominatim(user_agent="places")
+        reverse_Nominatim = RateLimiter(geolocator_Nominatim.reverse, min_delay_seconds=2)
+        df['location_Nominatim'] = df['coords_for_reverse'].apply(reverse_Nominatim, language='en')
+    except:
+        logging.error('Error while reverse geolocating with Nominatim')
 
-    # fetch location data
-    geolocator = ArcGIS(user_agent="places")
-    reverse = RateLimiter(geolocator.reverse, min_delay_seconds=0.5)
-    df['location'] = df['coords_for_reverse'].apply(reverse)
+    try:
+        # fetch location data
+        geolocator_ArcGIS = ArcGIS(user_agent="places")
+        reverse_ArcGIS = RateLimiter(geolocator_ArcGIS.reverse, min_delay_seconds=2)
+        df['location_ArcGIS'] = df['coords_for_reverse'].apply(reverse_ArcGIS)
+    except:
+        logging.error('Error while reverse geolocating with ArcGIS')
 
     return df
